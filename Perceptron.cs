@@ -10,9 +10,13 @@ namespace Linear_Classifier
     {
         private List<(List<float> inputs, float targetOutput)> _inputsToOutputs = new();
         private List<float> _weights;
-        public Perceptron(List<float> weights)
+        private bool _isHiddenLayer;
+        public Perceptron(List<float> weights, bool isHiddenLayer, float outputOverride = float.NaN)
         {
             _weights = weights;
+            _isHiddenLayer = isHiddenLayer;
+            if (!float.IsNaN(outputOverride))
+                OverrideOutput(outputOverride);
         }
 
         public void AddInput((List<float>, float) input)
@@ -21,48 +25,63 @@ namespace Linear_Classifier
         public void OverrideInput(List<float> inputs)
         {
             // For now we only support one piece of data just to test.
-            float targetOutput = _inputsToOutputs[0].targetOutput;
+            float targetOutput = _inputsToOutputs.Count > 0 ? _inputsToOutputs[0].targetOutput : -1f;
             _inputsToOutputs = new();
             _inputsToOutputs.Add((inputs, targetOutput));
         }
 
-        public (float, float) Train(bool useActivationFunc)
+        public void OverrideWeights(List<float> weights)
+            => _weights = weights;
+
+        public void OverrideOutput(float targetOutput)
         {
-            // Loop through all our inputs and train them according to our weights
-            foreach (var train in _inputsToOutputs)
+            // TODO: Made this better
+            List<List<float>> inputs = new();
+            foreach (var input in _inputsToOutputs)
+                inputs.Add(input.inputs);
+
+            _inputsToOutputs.Clear();
+            foreach (var input in inputs)
+                _inputsToOutputs.Add((input, targetOutput));
+        }
+
+        public float  TrainBackwardStep()
+        {
+            List<float> inputs = _inputsToOutputs[0].inputs;
+            int inputCount = inputs.Count;
+            int attempts = 0;
+
+            // Calculate summation of all inputs multiplied by their weights
+            float net = 0f;
+            for (int i = 0; i < inputCount; i++)
+                net += inputs[i] * _weights[i];
+
+            float sigmaK = 0f;
+            for (int i = 0; i < inputs.Count; i++)
             {
-                // Store by value since we need to access this multiple times
-                int inputCount = train.inputs.Count;
-                int attempts = 0;
-
-                while (attempts < PerceptronManager.ATTEMPT_COUNT)
-                {
-                    // Calculate summation of all inputs multiplied by their weights
-                    float net = 0f;
-                    for (int i = 0; i < inputCount; i++)
-                        net += train.inputs[i] * _weights[i];
-
-                    // Calculate output and error rate
-                    float output = useActivationFunc ? Sigmoid(net) : net;
-                    float errorRate = train.targetOutput - output;
-                    Console.WriteLine($"Error Rate: {errorRate}. Output: {output}"); // Log our data so we can monitor it
-
-                    // Recalculate our weight
-                    for (int i = 0; i < inputCount; i++)
-                        _weights[i] = _weights[i] + (PerceptronManager.LEARNING_RATE * (errorRate) * train.inputs[i]);
-
-                    attempts++;
-                    // Store our final error rate after classifying
-                    if (attempts == PerceptronManager.ATTEMPT_COUNT)
-                    {
-                        Console.WriteLine("---- END OF TRAINING ---- \n\n\n");
-                        return (errorRate, output);
-                    }
-                }
+                float input = inputs[i];
+                float weight = _weights[i];
+                sigmaK += (input * weight);
             }
 
-            // This will never be returned but VS needs it here.
-            return (-1f, -1f);
+            //float output = useActivationFunc ? Sigmoid(net) : net;
+            float errorRate = net * (1 - net) * sigmaK;
+            return errorRate;
+        }
+
+        // Calculates and returns net of inputs * weights 
+        public float TrainForwardStep(bool sigma)
+        {
+            List<float> inputs = _inputsToOutputs[0].inputs;
+            // Store by value since we need to access this multiple times
+            int inputCount = inputs.Count;
+            float net = 0f;
+            for (int i = 0; i < inputCount; i++)
+                net += inputs[i] * _weights[i];
+
+            // Calculate output and error rate
+            float output = sigma ? Sigmoid(net) : net;
+            return output;
         }
 
         public float Sigmoid(float net)

@@ -22,15 +22,34 @@ namespace Linear_Classifier
         public void OverrideInputs(List<float> inputs)
             => _perceptrons.ForEach(_ => _.OverrideInput(inputs));
 
-        public List<(float errorRate, float output)> Train()
+        public void OverrideWeights(List<float> weights)
+            => _perceptrons.ForEach(_ => _.OverrideWeights(weights));
+
+        //public List<(float errorRate, float output)> Train(bool activationFunction)
+        //{
+        //    List<(float errorRate, float output)> ret = new List<(float errorRate, float output)>();
+        //    // Loop through all our nodes and train them
+        //    foreach (var perceptron in _perceptrons)
+        //    {
+        //        (float errorRate, float output) errorRate = perceptron.Train(_useActivationFunction, activationFunction);
+        //        ret.Add(errorRate);
+        //    }
+        //    return ret;
+        //}
+
+        public List<float> TrainForward(bool sigma)
         {
-            List<(float errorRate, float output)> ret = new List<(float errorRate, float output)>();
-            // Loop through all our nodes and train them
+            List<float> ret = new();
             foreach (var perceptron in _perceptrons)
-            {
-                (float errorRate, float output) errorRate = perceptron.Train(_useActivationFunction);
-                ret.Add(errorRate);
-            }
+                ret.Add(perceptron.TrainForwardStep(sigma));
+            return ret;
+        }
+
+        public List<float> TrainBackward()
+        {
+            List<float> ret = new();
+            foreach (var perceptron in _perceptrons)
+                ret.Add(perceptron.TrainBackwardStep());
             return ret;
         }
     }
