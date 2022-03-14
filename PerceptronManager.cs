@@ -62,11 +62,14 @@ namespace Linear_Classifier
 
         public List<(float, float)> TrainPerceptrons()
         {
+            // Run our forward step
             List<(float errorRate, float output)> finalErrorRates = new List<(float, float)>();
             for (int i = 0; i < _perceptronsByLayer.Count; i++)
             {
+                // Get our layer and train it
                 PerceptronLayer layer = _perceptronsByLayer[i];
                 List<(float errorRate, float output)> errorRates = layer.Train();
+                
                 // If we're going to iterate again, go "down" a layer and set their values
                 if (i + 1 < _perceptronsByLayer.Count)
                 {
@@ -81,6 +84,7 @@ namespace Linear_Classifier
                     finalErrorRates.Add((errorRate.errorRate, errorRate.output));
             }
 
+            // Now we've got our outputs
             return finalErrorRates;
         }
     }

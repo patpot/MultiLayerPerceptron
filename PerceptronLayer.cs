@@ -25,6 +25,7 @@ namespace Linear_Classifier
         public List<(float errorRate, float output)> Train()
         {
             List<(float errorRate, float output)> ret = new List<(float errorRate, float output)>();
+            // Loop through all our nodes and train them
             foreach (var perceptron in _perceptrons)
             {
                 (float errorRate, float output) errorRate = perceptron.Train(_useActivationFunction);

@@ -24,11 +24,11 @@ namespace Linear_Classifier
             float targetOutput = _inputsToOutputs[0].targetOutput;
             _inputsToOutputs = new();
             _inputsToOutputs.Add((inputs, targetOutput));
-            Console.WriteLine("breakpoitn");
         }
 
         public (float, float) Train(bool useActivationFunc)
         {
+            // Loop through all our inputs and train them according to our weights
             foreach (var train in _inputsToOutputs)
             {
                 // Store by value since we need to access this multiple times
