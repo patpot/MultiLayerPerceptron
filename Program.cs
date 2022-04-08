@@ -8,21 +8,21 @@ namespace Linear_Classifier
     {
         static void Main(string[] args)
         {
-            PerceptronManager perceptronMan = new PerceptronManager();
-            perceptronMan.ConvertInputData(Environment.CurrentDirectory + "\\data.txt");
-
-            // Train our perceptrons in order to get our error rates
-            List<(float, float)> finalErrorRates = new();
-            finalErrorRates = perceptronMan.TrainPerceptrons();
-
-            float averageErrorRate = 0f;
-            foreach (var finalError in finalErrorRates)
+            NodeManager nodeMan = new NodeManager();
+            nodeMan.Initialise();
+            nodeMan.Train(100);
+            List<float> outputLayerNets = nodeMan.Test(new List<float> { 0.4f, 0.7f, 0.1f });
+            
+            for (int i = 0; i < outputLayerNets.Count; i++)
             {
-                Console.WriteLine($"Error Rate: {finalError.Item1}. Output: {finalError.Item2}");
-                averageErrorRate += finalError.Item1;
+                float numerator = MathF.Exp(outputLayerNets[i]);
+                float denominator = 0f;
+                for (int j = 0; j < outputLayerNets.Count; j++)
+                    denominator += MathF.Exp(outputLayerNets[j]);
+                
+                float probabiltyDistribution = numerator / denominator;
+                Console.WriteLine($"Probabilty Distribution: {probabiltyDistribution}");
             }
-            averageErrorRate /= finalErrorRates.Count;
-            Console.Write($"Average error rate: {averageErrorRate}");
         }
     }
 }
