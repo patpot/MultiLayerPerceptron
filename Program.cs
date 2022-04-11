@@ -11,7 +11,7 @@ namespace Linear_Classifier
             NodeManager nodeMan = new NodeManager();
             nodeMan.Initialise();
             nodeMan.Train(100);
-            List<float> outputLayerNets = nodeMan.Test(new List<float> { 0.4f, 0.7f, 0.1f });
+            List<float> outputLayerNets = nodeMan.Test(new List<float> { 0.30f, 0.70f, 0.90f });
             
             for (int i = 0; i < outputLayerNets.Count; i++)
             {

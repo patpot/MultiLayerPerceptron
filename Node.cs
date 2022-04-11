@@ -27,9 +27,9 @@ namespace Linear_Classifier
 
         public Node() { }
         
-        public Node(List<float> inputs, List<float> weights)
+        public Node(List<float> weights)
         {
-            Inputs = new List<float>(inputs);
+            Inputs = new List<float>();
             Weights = new List<float>(weights);
         }
 
@@ -40,8 +40,6 @@ namespace Linear_Classifier
 
         public float ForwardStep()
             => PreviousNodeOutput = Sigmoid(Net);
-
-
         public float OutputBackwardStep()
             => PreviousNodeOutput = TargetOutput - Net;
 
@@ -54,13 +52,16 @@ namespace Linear_Classifier
             return PreviousNodeOutput = offset * net;
         }
 
+        public float GetLastErrorRate()
+            => TargetOutput - PreviousNodeOutput;
+
         public void UpdateWeights()
         {
             for (int i = 0; i < Inputs.Count; i++)
                 Weights[i] += (NodeManager.LEARNING_RATE * PreviousNodeOutput * Inputs[i]);
         }
 
-        public float Sigmoid(float net)
+        public static float Sigmoid(float net)
             => 1 / (1 + MathF.Exp(-net));
     }
 }
