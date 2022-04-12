@@ -17,6 +17,7 @@ namespace Linear_Classifier
 
         public const int BIAS = 1;
         public const float LEARNING_RATE = 0.1f;
+        public const float ERROR_RATE_THRESHOLD = 0.00000000001f;
 
         public void Initialise()
         {
@@ -34,7 +35,11 @@ namespace Linear_Classifier
         }
 
         public void OverrideHiddenLayerInputs(List<float> newInputs)
-            => HiddenLayer.ForEach(node => node.CopyInputs(newInputs));
+        {
+            // Clear Inputs and replace with newInputs
+            Inputs.Clear();
+            Inputs.Add(newInputs);
+        }
         public void LoadInputData(string path)
         {
             // Read in our text and split it into lines
@@ -53,6 +58,7 @@ namespace Linear_Classifier
                     float.Parse(split2[1]),
                     float.Parse(split2[2]),
                 };
+                inputs.Add(1f);
                 Inputs.Add(inputs);
                 TargetOutputs.Add((float.Parse(split2[3]), float.Parse(split2[4])));
             }
@@ -62,6 +68,7 @@ namespace Linear_Classifier
         {
             // Setup data that exists outside of the epoch scope
             List<List<float>> outputWeights = new();
+            List<float> errorRates = new();
             List<float> outputNodeErrors = new();
             List<float> squaredErrors = new();
             for (int i = 0; i < epochCount; i++)
@@ -71,64 +78,79 @@ namespace Linear_Classifier
                 HiddenLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
                 OutputLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
                 outputWeights.Add(outputWeight);
+                
                 Console.WriteLine($"Running epoch: {i}");
                 for (int ii = 0; ii < Inputs.Count; ii++)
                 {
-                    // Assign the nodes the correct input data for this iteration
+                    // Assign the nodes the correct input data and target outputs for this iteration
                     HiddenLayer.ForEach(node => node.CopyInputs(Inputs[ii]));
+                    OutputLayer[0].TargetOutput = TargetOutputs[ii].Item1;
+                    OutputLayer[1].TargetOutput = TargetOutputs[ii].Item2;
 
-                    // Take our first forward step in the Hidden Layer
+                    // Take our first forward step in all nodes in the Hidden Layer
                     List<float> hiddenNodeNets = new();
                     foreach (var node in HiddenLayer)
                         hiddenNodeNets.Add(node.ForwardStep());
 
                     outputNodeErrors.Clear();
-                    // Move our data gathered from the forward step into the Output Layer
+                    // Move our data gathered from the forward step into the Output Layer, then calculate error rate
                     foreach (var node in OutputLayer)
                     {
                         node.CopyInputs(hiddenNodeNets);
-                        node.Inputs.Add(BIAS); // Add the bias from node x0
-                        outputNodeErrors.Add(node.OutputBackwardStep());
+                        // add BIAS to the start of the node.inputs list
+                        node.Inputs.Insert(0, BIAS);
+                        float errorRate = node.OutputNodeErrorRate();
+                        outputNodeErrors.Add(errorRate);
+                        errorRates.Add(errorRate);
                     }
 
-                    float squaredErrorSummation = 0f;
-                    // Total all the output node errors then square them
-                    foreach (var outputNodeError in outputNodeErrors)
-                        squaredErrorSummation += outputNodeError;
-                    squaredErrorSummation *= squaredErrorSummation;
-                    squaredErrorSummation *= 0.5f;
-                    squaredErrors.Add(squaredErrorSummation);
-
-                    List<float> hiddenNodeErrors = new();
-                    // Override our inputs and weights in our Hidden Layer, then perform our backward step
+                    // Take the output errors and output weights and use them to calculate the hidden layer errors with the last hidden layer result
                     for (int j = 0; j < HiddenLayer.Count; j++)
                     {
                         List<float> weights = new();
                         foreach (var node in OutputLayer)
-                            weights.Add(node.Weights[j]);
+                            weights.Add(node.Weights[j+1]); // Offset the weight we're getting because of x0 also adding a weight
                         // Do a backwards step with our outputs and weights from the output layer
-                        hiddenNodeErrors.Add(HiddenLayer[j].HiddenBackwardStep(weights, outputNodeErrors));
+                        HiddenLayer[j].HiddenNodeErrorRate(weights, outputNodeErrors);
                     }
+                }
 
+                // Use our output errors to calculate the Squared Error for output
+                // Squared Error = 1/2 * summation(tk-ok)^2
+                float squaredErrorSummation = 0f;
+                foreach (var outputNodeError in outputNodeErrors) // summation(tk-ok)
+                    squaredErrorSummation += outputNodeError * outputNodeError;
+                squaredErrorSummation *= 0.5f; // * 1/2
+                squaredErrors.Add(squaredErrorSummation);
 
-                    // Now that we're done calculating our error rates, update all our weights accordingly
-                    HiddenLayer.ForEach(node => node.UpdateWeights());
-                    OutputLayer.ForEach(node => node.UpdateWeights());
+                // Now that we're done calculating our error rates, update all our weights accordingly and iterate
+                HiddenLayer.ForEach(node => node.UpdateWeights());
+                OutputLayer.ForEach(node => node.UpdateWeights());
+
+                if (squaredErrors.Last() < ERROR_RATE_THRESHOLD)
+                {
+                    // We've reached our error threshold, so we can stop training
+                    //break;
                 }
             }
 
-            foreach (var output in outputNodeErrors)
+            foreach (var output in errorRates)
                 Console.WriteLine($"Error Rate:{output}");
 
             foreach (var sqError in squaredErrors)
                 Console.WriteLine($"Squared Error:{sqError}");
 
+            // convert squaredErrors to an array of strings
+            string[] squaredErrorsStrings = squaredErrors.Select(error => error.ToString()).ToArray();
+            File.WriteAllLines(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\output.txt", squaredErrorsStrings);
+
             Console.Write("| step");
             for (int i = 0; i <= 10; i++)
-                Console.Write($"|  {i}  ");
+                Console.Write($"|  {i+1}  ");
             for (int i = 0; i < outputWeights[0].Count; i++)
             {
                 Console.WriteLine($"\n");
+                Console.Write("      ");
                 for (int ii = 0; ii < 10; ii++)
                     Console.Write($"|{outputWeights[ii][i].ToString("0.000")}");
             }
@@ -137,6 +159,7 @@ namespace Linear_Classifier
 
         public List<float> Test(List<float> inputs)
         {
+            // Actually use the test input values
             OverrideHiddenLayerInputs(inputs);
 
             // Take our first forward step in the Hidden Layer
