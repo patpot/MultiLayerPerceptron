@@ -126,20 +126,28 @@ namespace Linear_Classifier
                     // Now that we're done calculating our error rates, update all our weights accordingly and iterate
                     HiddenLayer.ForEach(node => node.UpdateWeights());
                     OutputLayer.ForEach(node => node.UpdateWeights());
-
-                    outputWeight = new();
-                    // Add our weights to our output weights
-                    HiddenLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
-                    OutputLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
-                    outputWeights.Add(outputWeight);
                 }
 
-                squaredErrors.Add(squaredErrorSummation / 6f);
+                squaredErrors.Add(squaredErrorSummation);
+
+
+                outputWeight = new();
+                // Add our weights to our output weights
+                HiddenLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
+                OutputLayer.ForEach(node => node.Weights.ForEach(weight => outputWeight.Add(weight)));
+                outputWeights.Add(outputWeight);
             }
 
             // convert squaredErrors to an array of strings
             string[] squaredErrorsStrings = squaredErrors.Select(error => error.ToString()).ToArray();
             File.WriteAllLines(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\output.txt", squaredErrorsStrings);
+
+            for (int i = 0; i < outputWeights[0].Count; i++)
+            {
+                for (int ii = 0; ii < 11; ii++)
+                    Console.WriteLine($"{outputWeights[ii][i].ToString("0.000")}");
+                Console.WriteLine("");
+            }
         }
 
         public List<float> Test(List<float> inputs)
